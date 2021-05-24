@@ -22,6 +22,9 @@ public:
 
 private:
   void initAt();
+  void initTCP();
+  void initHTTP();
+
   void rr();
   char line[LINE_BUFFER_LENGTH];
   int lineIndex = 0;
@@ -35,6 +38,8 @@ private:
   void sendPing();
     void http();
   bool connected =false;
+  int timeOut = 0;
+  bool sendCmd(String cmd,int timeout);
  
 };
 #endif

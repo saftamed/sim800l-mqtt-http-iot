@@ -5,8 +5,7 @@
 bool ping = false;
 int count = 0;
 
-bool pub = false;
-int count2 = 0;
+
 //oftwareSerial mySerial(10,11);
 SoftwareSerial mySerial(14, 12);
 Mqtt::Mqtt(bool displayMsg) {
@@ -19,7 +18,9 @@ void Mqtt::begin(int baudRate) {
 
   Serial.println("ok");
  initAt();
- http();  /*
+ http(); 
+ initTCP();
+  /*
   cli();                     
   TCCR1A = 0;               
   TCCR1B = 0;                
@@ -32,15 +33,11 @@ void Mqtt::begin(int baudRate) {
 ISR(TIMER1_COMPA_vect){
   TCNT1  = 0; 
   count++;
-    count2++;
   if(count >= 50){
     ping = true;
     count = 0;
   }
-  if(count2 >=70){
-    pub = true;
-    count2 = 0;
-  }
+
 }*/
 
 void Mqtt::connect(String server,String server1,String port,String s,bool auth,String user,String pswd) {
@@ -153,6 +150,43 @@ void Mqtt::subscribe(String topic) {
    rr();
    connected = true;
 }
+void Mqtt::initTCP(){
+  sendCmd("AT+CIICR\r",10);
+  // mySerial.println("AT+CIICR\r");
+  // delay(5000);
+  // rr();
+  mySerial.println("AT+CIFSR\r");
+  delay(1000);
+  rr();  
+}
+bool Mqtt::sendCmd(String cmd,int timeout){
+  mySerial.println(cmd);
+  timeOut = 0;
+  while (mySerial.available()<=0) {
+    timeOut++;
+    if(timeOut>=timeout){
+      return false;
+    }
+    delay(1000);
+    Serial.print(".");
+  }
+  String s = mySerial.readString();
+  Serial.println(s);
+ if(s.indexOf("ok")>=0){
+   return true;
+  }
+  return false;
+}
+void Mqtt::initHTTP(){
+  sendCmd("AT+SAPBR=1,1\r",10);
+  // mySerial.println("AT+SAPBR=1,1\r");
+  // delay(5000);
+  // rr();
+  mySerial.println("AT+SAPBR=2,1\r");
+  delay(1000);
+  rr();
+}
+
 void Mqtt::initAt() {
   mySerial.println("AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r");
 
@@ -171,12 +205,6 @@ void Mqtt::initAt() {
   mySerial.println("AT+CSTT=\"internet.ooredoo.tn\"\r");
   delay(1000);
    rr();
-  mySerial.println("AT+CIICR\r");
-  delay(5000);
-   rr();
-  mySerial.println("AT+CIFSR\r");
-  delay(1000);
-   rr();
   mySerial.println("AT+CIPSPRT=0\r");
   delay(1000);
    rr();
@@ -187,13 +215,8 @@ void Mqtt::rr() {
   }
 }
 void Mqtt::http(){
-     mySerial.println("AT+SAPBR=2,1\r");
-  delay(5000);
-   rr();
-  mySerial.println("AT+SAPBR=1,1\r");
-  delay(5000);
-   rr();
-    mySerial.println("AT+HTTPTERM\r");
+  initHTTP();
+  mySerial.println("AT+HTTPTERM\r");
   delay(1000);
   rr();
   mySerial.println("AT+HTTPINIT\r");
@@ -228,16 +251,17 @@ void Mqtt::http(){
   Serial.println("Parsing input failed!");
   return;
   }
- Serial.println(myObject.length());
-   for (int i=0; i<myObject.length(); i++) {
-  Serial.println((int)myObject[i]["value"]);
+  for (int i=0; i<myObject.length(); i++) {
+  if((String)((const char*)myObject[i]["action"])=="D"){
+    pinMode((int)myObject[i]["pin"],OUTPUT);
+    digitalWrite((int)myObject[i]["pin"],!(int)myObject[i]["value"]);
+  }
 
-    if((String)((const char*)myObject[i]["action"])=="D"){
-      pinMode((int)myObject[i]["pin"],OUTPUT);
-      digitalWrite((int)myObject[i]["pin"],!(int)myObject[i]["value"]);
-    }
+  }
+  mySerial.println("AT+SAPBR=0,1\r");
+  delay(2000);
+  rr();
 
-   }
 
 }
 void Mqtt::getData(){
@@ -270,11 +294,7 @@ bool Mqtt::available(){
       count = 0;
     }
 
-        if(pub){
-      pub = false;
-      publish("iot-2/4561", "{\"action\":\"D\",\"pin\":13,\"value\":1,\"options\":50}");
-      count2 = 0;
-    }
+
      while ( mySerial.available()>0 ) {
      char  c = mySerial.read();
      //Serial.print(c);

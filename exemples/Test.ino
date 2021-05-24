@@ -35,17 +35,16 @@ void loop() {
 
 */
 void setActions(String line){
-   JSONVar myObject = JSON.parse(line);
-             if (JSON.typeof(myObject) == "undefined") {
-        Serial.println("Parsing input failed!");
-        return;
-      }
+  JSONVar myObject = JSON.parse(line);
+  if (JSON.typeof(myObject) == "undefined") {
+    Serial.println("Parsing input failed!");
+    return;
+  }
 
-
-      if((String)((const char*)myObject["ACTION"])=="D"){
-        pinMode((int)myObject["PIN"],OUTPUT);
-        digitalWrite((int)myObject["PIN"],(int)myObject["VALUE"]);
-      }
+  if((String)((const char*)myObject["ACTION"])=="D"){
+    pinMode((int)myObject["PIN"],OUTPUT);
+    digitalWrite((int)myObject["PIN"],(int)myObject["VALUE"]);
+  }
 }
 
 
